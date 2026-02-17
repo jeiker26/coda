@@ -108,9 +108,9 @@ export async function executeJob(jobId: string): Promise<void> {
     )
     jobStore.addLog(jobId, 'Patches validated')
 
-    // Create branch
-    await gitService.createBranch(job.branch)
-    jobStore.addLog(jobId, `Created branch: ${job.branch}`)
+    // Create branch from base (main/master or specified)
+    await gitService.createBranch(job.branch, job.baseBranch)
+    jobStore.addLog(jobId, `Created branch: ${job.branch}${job.baseBranch ? ` from ${job.baseBranch}` : ' from default branch'}`)
 
     // Update status to patching
     jobStore.update(jobId, { status: 'patching' })

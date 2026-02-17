@@ -38,15 +38,16 @@ class JobStore {
     // Handle object form
     if (typeof taskOrRequest === 'object') {
       const req = taskOrRequest
-      return this.createJob(req.task, req.repo, req.dryRun ?? false, req.skipTests ?? false, req.skills)
+      return this.createJob(req.task, req.repo, req.baseBranch, req.dryRun ?? false, req.skipTests ?? false, req.skills)
     }
     // Handle individual params form
-    return this.createJob(taskOrRequest, repo!, dryRun, skipTests, skills)
+    return this.createJob(taskOrRequest, repo!, undefined, dryRun, skipTests, skills)
   }
 
   private createJob(
     task: string,
     repo: string,
+    baseBranch: string | undefined,
     dryRun: boolean,
     skipTests: boolean,
     skills?: SkillContext[]
@@ -57,6 +58,7 @@ class JobStore {
       task,
       repo,
       branch: generateBranchSlug(task),
+      baseBranch,
       status: 'queued',
       logs: [],
       createdAt: now,

@@ -16,9 +16,17 @@ export class GitService {
     }
   }
 
-  async createBranch(branchName: string): Promise<void> {
-    // Ensure we're on a clean state
+  async createBranch(branchName: string, baseBranch?: string): Promise<void> {
+    // Ensure we're on a clean state and fetch latest
     await this.git.fetch()
+    
+    // Determine the base branch (main/master or specified)
+    const base = baseBranch || await this.getDefaultBranch()
+    console.log(`[GitService] Creating branch "${branchName}" from "${base}"`)
+    
+    // Checkout the base branch and pull latest
+    await this.git.checkout(base)
+    await this.git.pull('origin', base)
     
     // Delete local branch if it already exists (from previous failed attempt)
     try {
@@ -34,8 +42,31 @@ export class GitService {
       // Remote branch doesn't exist, that's fine
     }
     
-    // Create and checkout new branch
+    // Create and checkout new branch from base
     await this.git.checkoutLocalBranch(branchName)
+  }
+
+  async getDefaultBranch(): Promise<string> {
+    // Try to detect the default branch (main or master)
+    try {
+      // Check if 'main' exists
+      const branches = await this.git.branch(['-a'])
+      if (branches.all.includes('main') || branches.all.includes('remotes/origin/main')) {
+        return 'main'
+      }
+      if (branches.all.includes('master') || branches.all.includes('remotes/origin/master')) {
+        return 'master'
+      }
+      // Fallback: try to get from remote HEAD
+      const remoteInfo = await this.git.remote(['show', 'origin'])
+      const match = remoteInfo?.match(/HEAD branch: (\S+)/)
+      if (match) {
+        return match[1]
+      }
+    } catch (e) {
+      console.log('[GitService] Could not detect default branch, falling back to main')
+    }
+    return 'main'
   }
 
   async commitChanges(message: string): Promise<void> {

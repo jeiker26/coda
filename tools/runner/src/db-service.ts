@@ -25,6 +25,7 @@ db.exec(`
     task TEXT NOT NULL,
     repo TEXT NOT NULL,
     branch TEXT NOT NULL,
+    base_branch TEXT,
     status TEXT NOT NULL DEFAULT 'queued',
     pr_url TEXT,
     error TEXT,
@@ -53,10 +54,21 @@ try {
   }
 }
 
+// Migration: Add base_branch column if it doesn't exist
+try {
+  db.exec(`ALTER TABLE jobs ADD COLUMN base_branch TEXT`)
+  console.log('[DB] Added base_branch column to jobs table')
+} catch (e: any) {
+  // Column already exists, ignore error
+  if (!e.message.includes('duplicate column')) {
+    console.error('[DB] Migration error:', e.message)
+  }
+}
+
 // Prepared statements for better performance
 const insertJob = db.prepare(`
-  INSERT INTO jobs (id, task, repo, branch, status, logs, created_at, updated_at, dry_run, skip_tests, retry_count, skills)
-  VALUES (@id, @task, @repo, @branch, @status, @logs, @createdAt, @updatedAt, @dryRun, @skipTests, @retryCount, @skills)
+  INSERT INTO jobs (id, task, repo, branch, base_branch, status, logs, created_at, updated_at, dry_run, skip_tests, retry_count, skills)
+  VALUES (@id, @task, @repo, @branch, @baseBranch, @status, @logs, @createdAt, @updatedAt, @dryRun, @skipTests, @retryCount, @skills)
 `)
 
 const selectJob = db.prepare(`SELECT * FROM jobs WHERE id = ?`)
@@ -81,6 +93,7 @@ const updateJobStmt = db.prepare(`
     logs = @logs,
     updated_at = @updatedAt,
     branch = @branch,
+    base_branch = @baseBranch,
     retry_count = @retryCount,
     skills = @skills
   WHERE id = @id
@@ -95,6 +108,7 @@ function rowToJob(row: any): Job {
     task: row.task,
     repo: row.repo,
     branch: row.branch,
+    baseBranch: row.base_branch || undefined,
     status: row.status as JobStatus,
     prUrl: row.pr_url || undefined,
     error: row.error || undefined,
@@ -115,6 +129,7 @@ function jobToParams(job: Job): any {
     task: job.task,
     repo: job.repo,
     branch: job.branch,
+    baseBranch: job.baseBranch || null,
     status: job.status,
     prUrl: job.prUrl || null,
     error: job.error || null,
