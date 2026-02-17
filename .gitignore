@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+tools/runner/node_modules/
+
+# Build outputs
+dist/
+tools/runner/dist/
+src-tauri/target/
+
+# Environment
+.env
+.env.local
+tools/runner/.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Tauri
+src-tauri/gen/
