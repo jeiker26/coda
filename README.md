@@ -191,12 +191,15 @@ Run tasks and get updates directly from Slack.
 #### Slack Commands
 
 ```
-@Coda help                                    # Show all commands
-@Coda list jobs                               # Recent jobs
-@Coda status job-abc123                       # Job details
-@Coda cancel job-abc123                       # Cancel a job
-@Coda prompt "Add tests" repo:frontend        # Run a prompt
+@Coda help                                         # Show all commands
+@Coda list jobs                                    # Recent jobs
+@Coda status job-abc123                            # Job details
+@Coda cancel job-abc123                            # Cancel a job
+@Coda prompt "Add tests" repo:frontend             # Run a prompt
+@Coda prompt "Fix bug" repo:frontend branch:develop # Run from specific branch
 ```
+
+Note: If branch is not specified, the job will be created from `main` or `master` (auto-detected).
 
 ## Skills System
 
@@ -274,11 +277,13 @@ coda/
 
 ```
 1. Create    → Store in SQLite (queued)
-2. Coding    → Send to AI, receive patches
-3. Patching  → Apply file changes
-4. Testing   → Run test commands (optional)
-5. PR        → Branch, commit, push, open PR
-6. Notify    → Slack message
+2. Checkout  → Switch to base branch (main/master), pull latest
+3. Branch    → Create new branch from base
+4. Coding    → Send to AI, receive patches
+5. Patching  → Apply file changes
+6. Testing   → Run test commands (optional)
+7. PR        → Commit, push, open PR
+8. Notify    → Slack message
 ```
 
 ## Configuration
@@ -352,10 +357,20 @@ curl -X POST http://localhost:3847/jobs \
   -d '{
     "task": "Add input validation",
     "repo": "/path/to/repo",
+    "baseBranch": "develop",
     "skipTests": true,
     "skills": [{"name": "TypeScript", "content": "..."}]
   }'
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `task` | string | yes | Task description for the AI |
+| `repo` | string | yes | Full path to the repository |
+| `baseBranch` | string | no | Branch to create from (defaults to main/master) |
+| `skipTests` | boolean | no | Skip running tests (default: false) |
+| `dryRun` | boolean | no | Generate code without pushing (default: false) |
+| `skills` | array | no | Skills to inject into AI context |
 
 ## Troubleshooting
 

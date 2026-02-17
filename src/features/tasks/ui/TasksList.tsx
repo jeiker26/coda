@@ -22,6 +22,7 @@ export function TasksList() {
   const [name, setName] = useState('')
   const [prompt, setPrompt] = useState('')
   const [repo, setRepo] = useState('')
+  const [baseBranch, setBaseBranch] = useState('')
   const [skipTests, setSkipTests] = useState(false)
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function TasksList() {
     setName('')
     setPrompt('')
     setRepo('')
+    setBaseBranch('')
     setSkipTests(false)
     setIsCreating(false)
     setEditingId(null)
@@ -51,10 +53,18 @@ export function TasksList() {
   const handleSave = () => {
     if (!name.trim() || !prompt.trim() || !repo) return
 
+    const taskData = { 
+      name, 
+      prompt, 
+      repo, 
+      baseBranch: baseBranch.trim() || undefined,
+      skipTests 
+    }
+
     if (editingId) {
-      updateTask(editingId, { name, prompt, repo, skipTests })
+      updateTask(editingId, taskData)
     } else {
-      addTask({ name, prompt, repo, skipTests })
+      addTask(taskData)
     }
     resetForm()
   }
@@ -64,6 +74,7 @@ export function TasksList() {
     setName(task.name)
     setPrompt(task.prompt)
     setRepo(task.repo)
+    setBaseBranch(task.baseBranch || '')
     setSkipTests(task.skipTests)
     setIsCreating(true)
   }
@@ -84,6 +95,7 @@ export function TasksList() {
         body: JSON.stringify({
           task: task.prompt,
           repo: task.repo,
+          baseBranch: task.baseBranch || undefined,
           skipTests: task.skipTests,
           skills: skillsPayload,
         }),
@@ -147,6 +159,22 @@ export function TasksList() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">
+              Base Branch <span className="text-gray-500">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={baseBranch}
+              onChange={(e) => setBaseBranch(e.target.value)}
+              className="w-full px-3 py-2 bg-white/10 rounded border border-white/20 focus:border-blue-500 outline-none"
+              placeholder="main (auto-detected if empty)"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Branch to create from. Defaults to main/master if empty.
+            </p>
           </div>
 
           <div>
@@ -234,6 +262,11 @@ export function TasksList() {
               {task.skipTests && (
                 <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-yellow-600/30 text-yellow-400 rounded">
                   Skip tests
+                </span>
+              )}
+              {task.baseBranch && (
+                <span className="inline-block mt-2 ml-1 px-2 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">
+                  from: {task.baseBranch}
                 </span>
               )}
             </div>

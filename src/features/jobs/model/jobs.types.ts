@@ -3,6 +3,7 @@ export interface Job {
   task: string
   repo: string
   branch: string
+  baseBranch?: string  // Base branch created from
   status: JobStatus
   prUrl?: string
   error?: string
@@ -30,6 +31,7 @@ export interface SkillContext {
 export interface CreateJobRequest {
   task: string
   repo: string
+  baseBranch?: string  // Base branch to create from (defaults to main/master)
   dryRun?: boolean
   skipTests?: boolean
   skills?: SkillContext[]

@@ -17,6 +17,7 @@ interface ParsedCommand {
   taskName?: string
   prompt?: string
   repo?: string
+  baseBranch?: string
   jobId?: string
 }
 
@@ -51,10 +52,16 @@ function parseCommand(text: string): ParsedCommand {
     return { action: 'run-task', taskName: taskMatch[1], repo: taskMatch[2] }
   }
 
-  // Run prompt: 'prompt "do something" repo:my-repo' or 'prompt "do something" in my-repo'
-  const promptMatch = text.match(/prompt\s+["']([^"']+)["']\s+(?:in|repo:?\s*)(\S+)/i)
+  // Run prompt: 'prompt "do something" repo:my-repo branch:develop' or 'prompt "do something" in my-repo'
+  // Supports optional branch parameter
+  const promptMatch = text.match(/prompt\s+["']([^"']+)["']\s+(?:in|repo:?\s*)(\S+)(?:\s+(?:branch|from):?\s*(\S+))?/i)
   if (promptMatch) {
-    return { action: 'run-prompt', prompt: promptMatch[1], repo: promptMatch[2] }
+    return { 
+      action: 'run-prompt', 
+      prompt: promptMatch[1], 
+      repo: promptMatch[2],
+      baseBranch: promptMatch[3] || undefined
+    }
   }
 
   // Simple prompt without repo (will need clarification)
@@ -88,6 +95,9 @@ function getHelpMessage(): string {
 *Run an ad-hoc prompt:*
 \`@Coda prompt "Add validation to login form" repo:frontend\`
 
+*Run with specific base branch:*
+\`@Coda prompt "Fix bug" repo:frontend branch:develop\`
+
 *List recent jobs:*
 \`@Coda list jobs\`
 
@@ -98,7 +108,9 @@ function getHelpMessage(): string {
 \`@Coda cancel job-abc123\`
 
 *Get help:*
-\`@Coda help\``
+\`@Coda help\`
+
+_Note: If branch is not specified, defaults to main/master._`
 }
 
 // Available repos (loaded from store)
@@ -222,14 +234,19 @@ export async function initSlackBot(config: SlackBotConfig): Promise<void> {
             break
           }
 
-          // Create job
+          // Create job with optional baseBranch
           const job = jobStore.create({
             task: command.prompt,
             repo: repo.path,
+            baseBranch: command.baseBranch,
             skipTests: true, // Default to skip tests from Slack
           })
           
-          await say(`🚀 Job created: \`${job.id.slice(0, 8)}\`\n*Task:* ${command.prompt}\n*Repo:* \`${repo.name}\`\n\nI'll notify you when it's done!`)
+          const branchInfo = command.baseBranch 
+            ? `\n*From branch:* \`${command.baseBranch}\`` 
+            : '\n*From branch:* `main/master` (auto)'
+          
+          await say(`🚀 Job created: \`${job.id.slice(0, 8)}\`\n*Task:* ${command.prompt}\n*Repo:* \`${repo.name}\`${branchInfo}\n\nI'll notify you when it's done!`)
           
           // Execute in background
           setImmediate(() => executeJob(job.id))

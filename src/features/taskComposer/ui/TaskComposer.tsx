@@ -10,6 +10,7 @@ type Mode = 'run' | 'draft' | 'test'
 export function TaskComposer() {
   const [task, setTask] = useState('')
   const [selectedRepo, setSelectedRepo] = useState('')
+  const [baseBranch, setBaseBranch] = useState('')
   const [mode, setMode] = useState<Mode>('run')
   const [skipTests, setSkipTests] = useState(true)
   const { repos, skipTestsByDefault } = useSettingsStore()
@@ -26,6 +27,7 @@ export function TaskComposer() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] })
       setTask('')
+      setBaseBranch('')
     },
   })
 
@@ -42,6 +44,7 @@ export function TaskComposer() {
     createJobMutation.mutate({
       task: task.trim(),
       repo: selectedRepo,
+      baseBranch: baseBranch.trim() || undefined,
       dryRun: mode === 'draft',
       skipTests,
       skills: skillsPayload,
@@ -82,6 +85,23 @@ export function TaskComposer() {
             No repositories configured. Go to Settings to add repos.
           </p>
         )}
+      </div>
+
+      {/* Base Branch */}
+      <div>
+        <label className="block text-sm text-gray-400 mb-1">
+          Base Branch <span className="text-gray-500">(optional)</span>
+        </label>
+        <input
+          type="text"
+          value={baseBranch}
+          onChange={(e) => setBaseBranch(e.target.value)}
+          className="w-full px-3 py-2 bg-white/10 rounded-lg border border-white/20 focus:border-blue-500 outline-none"
+          placeholder="main (auto-detected if empty)"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Branch to create from. Defaults to main/master if empty.
+        </p>
       </div>
 
       {/* Mode Selector */}
