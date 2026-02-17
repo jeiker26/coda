@@ -10,6 +10,7 @@ export interface Job {
   createdAt: string
   updatedAt: string
   skipTests?: boolean
+  skills?: SkillContext[]
 }
 
 export type JobStatus = 
@@ -21,9 +22,15 @@ export type JobStatus =
   | 'failed'
   | 'cancelled'
 
+export interface SkillContext {
+  name: string
+  content: string
+}
+
 export interface CreateJobRequest {
   task: string
   repo: string
   dryRun?: boolean
   skipTests?: boolean
+  skills?: SkillContext[]
 }

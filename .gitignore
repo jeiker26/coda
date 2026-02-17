@@ -6,25 +6,98 @@ tools/runner/node_modules/
 dist/
 tools/runner/dist/
 src-tauri/target/
+*.tsbuildinfo
 
-# Environment
+# Environment files
 .env
 .env.local
+.env.*.local
 tools/runner/.env
 
-# IDE
+# IDE / Editors
 .idea/
 .vscode/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
+.project
+.classpath
+.settings/
 
-# OS
+# OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Tauri
 src-tauri/gen/
+src-tauri/WixTools/
+src-tauri/icons/*.ico
+src-tauri/icons/*.icns
+
+# Testing
+coverage/
+.nyc_output/
+
+# Database (local data - don't commit user data)
+# Note: The actual db is in ~/.mac-agent/, not in repo
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.cache
+.cache/
+
+# Package manager locks (keep package-lock.json)
+yarn.lock
+pnpm-lock.yaml
+
+# Optional: Uncomment if you want to ignore lock files
+# package-lock.json
+# tools/runner/package-lock.json
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Certificates
+*.pem
+*.key
+*.crt
+
+# Secrets (never commit these!)
+secrets/
+*.secret
+credentials.json
+service-account.json
+
+# macOS bundle outputs (for distribution)
+*.app
+*.dmg
+*.pkg
+
+# Rust
+**/*.rs.bk
+Cargo.lock
+!src-tauri/Cargo.lock

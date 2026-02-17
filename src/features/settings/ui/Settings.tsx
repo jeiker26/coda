@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSettingsStore } from '../model/settings.store'
+import { RepoSkills } from '@features/skills'
 
 const RUNNER_URL = 'http://localhost:3847'
 
@@ -22,6 +23,7 @@ export function Settings() {
   const [isLoadingRepos, setIsLoadingRepos] = useState(false)
   const [runnerStatus, setRunnerStatus] = useState<RunnerStatus | null>(null)
   const [syncMessage, setSyncMessage] = useState('')
+  const [expandedRepoPath, setExpandedRepoPath] = useState<string | null>(null)
 
   // Fetch runner status
   const loadRunnerStatus = async () => {
@@ -50,13 +52,16 @@ export function Settings() {
           preferredProvider: settings.preferredProvider,
           githubToken: settings.githubToken,
           slackWebhookUrl: settings.slackWebhookUrl,
+          slackAppToken: settings.slackAppToken,
+          slackBotToken: settings.slackBotToken,
           maxChangedFiles: settings.maxChangedFiles,
           maxDiffSize: settings.maxDiffSize,
           autoRetry: settings.autoRetry,
         }),
       })
       if (res.ok) {
-        setSyncMessage('Synced!')
+        const result = await res.json()
+        setSyncMessage(result.slackBot === 'connected' ? 'Synced! Slack connected' : 'Synced!')
         loadRunnerStatus()
       } else {
         setSyncMessage('Sync failed')
@@ -64,7 +69,7 @@ export function Settings() {
     } catch (e) {
       setSyncMessage('Runner not available')
     }
-    setTimeout(() => setSyncMessage(''), 2000)
+    setTimeout(() => setSyncMessage(''), 3000)
   }
 
   // Fetch available repos from runner
@@ -222,8 +227,12 @@ export function Settings() {
               placeholder="ghp_..."
             />
           </div>
+          
+          {/* Slack Webhook */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Slack Webhook URL</label>
+            <label className="block text-sm text-gray-400 mb-1">
+              Slack Webhook URL <span className="text-gray-500">(notifications)</span>
+            </label>
             <input
               type="text"
               value={settings.slackWebhookUrl || ''}
@@ -231,6 +240,47 @@ export function Settings() {
               className="w-full px-3 py-2 bg-white/10 rounded border border-white/20 focus:border-blue-500 outline-none"
               placeholder="https://hooks.slack.com/..."
             />
+          </div>
+          
+          {/* Slack Socket Mode */}
+          <div className="p-3 bg-white/5 rounded-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium">
+                Slack Socket Mode <span className="text-gray-500">(commands from Slack)</span>
+              </h4>
+              {runnerStatus && (
+                <span className={`text-xs px-2 py-0.5 rounded ${
+                  (runnerStatus as any).slackBot === 'connected' 
+                    ? 'bg-green-600/30 text-green-400' 
+                    : 'bg-gray-600/30 text-gray-400'
+                }`}>
+                  {(runnerStatus as any).slackBot || 'disconnected'}
+                </span>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">App Token (xapp-...)</label>
+              <input
+                type="password"
+                value={settings.slackAppToken || ''}
+                onChange={(e) => settings.setApiKey('slackAppToken', e.target.value)}
+                className="w-full px-3 py-2 bg-white/10 rounded border border-white/20 focus:border-blue-500 outline-none"
+                placeholder="xapp-..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Bot Token (xoxb-...)</label>
+              <input
+                type="password"
+                value={settings.slackBotToken || ''}
+                onChange={(e) => settings.setApiKey('slackBotToken', e.target.value)}
+                className="w-full px-3 py-2 bg-white/10 rounded border border-white/20 focus:border-blue-500 outline-none"
+                placeholder="xoxb-..."
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              See README for Slack App setup instructions. After adding tokens, click "Sync to Runner".
+            </p>
           </div>
         </div>
       </section>
@@ -293,18 +343,38 @@ export function Settings() {
           {settings.repos.map((repo) => (
             <div
               key={repo.path}
-              className="flex items-center justify-between p-3 bg-white/5 rounded"
+              className="bg-white/5 rounded overflow-hidden"
             >
-              <div>
-                <div className="font-medium">{repo.name}</div>
-                <div className="text-sm text-gray-400 truncate max-w-[250px]">{repo.path}</div>
-              </div>
-              <button
-                onClick={() => settings.removeRepo(repo.path)}
-                className="px-2 py-1 text-sm text-red-400 hover:text-red-300"
+              <div
+                className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/10"
+                onClick={() => setExpandedRepoPath(expandedRepoPath === repo.path ? null : repo.path)}
               >
-                Remove
-              </button>
+                <div>
+                  <div className="font-medium">{repo.name}</div>
+                  <div className="text-sm text-gray-400 truncate max-w-[250px]">{repo.path}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">
+                    {expandedRepoPath === repo.path ? 'Hide skills' : 'Show skills'}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      settings.removeRepo(repo.path)
+                    }}
+                    className="px-2 py-1 text-sm text-red-400 hover:text-red-300"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+              {expandedRepoPath === repo.path && (
+                <div className="px-3 pb-3 border-t border-white/10">
+                  <div className="mt-3">
+                    <RepoSkills repoPath={repo.path} repoName={repo.name} />
+                  </div>
+                </div>
+              )}
             </div>
           ))}
           {settings.repos.length === 0 && (

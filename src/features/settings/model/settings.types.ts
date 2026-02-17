@@ -13,6 +13,8 @@ export interface Settings {
   preferredProvider: 'openai' | 'anthropic'
   githubToken?: string
   slackWebhookUrl?: string
+  slackAppToken?: string      // xapp-... for Socket Mode
+  slackBotToken?: string      // xoxb-... for Socket Mode
   repos: RepoConfig[]
   maxChangedFiles: number
   maxDiffSize: number

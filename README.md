@@ -12,9 +12,10 @@
   <a href="#features">Features</a> •
   <a href="#installation">Installation</a> •
   <a href="#usage">Usage</a> •
+  <a href="#slack-integration">Slack</a> •
+  <a href="#skills-system">Skills</a> •
   <a href="#architecture">Architecture</a> •
-  <a href="#configuration">Configuration</a> •
-  <a href="#roadmap">Roadmap</a>
+  <a href="#configuration">Configuration</a>
 </p>
 
 ---
@@ -23,18 +24,25 @@
 
 Coda is a native macOS desktop application built with Tauri that acts as your personal AI coding assistant. It connects to Claude (Anthropic) or OpenAI to analyze tasks, generate code patches, run tests, and automatically create Pull Requests.
 
+**Key highlights:**
+- Run coding tasks from the app or directly from Slack
+- Skills system to give AI context about your repos
+- Automatic PR creation following your repo conventions
+- Support for custom API gateways (proxies)
+
 ## Features
 
-- **AI-Powered Code Generation**: Supports both Anthropic Claude and OpenAI GPT models
-- **Custom API Gateways**: Configure custom base URLs for API proxies/gateways
-- **Automatic PR Creation**: Creates branches, commits, pushes, and opens PRs via GitHub CLI
-- **Smart Conventions**: Reads repository conventions (husky/commitlint) for proper formatting
-- **Slack Notifications**: Get notified when jobs complete or fail
-- **Job Persistence**: SQLite database stores job history across restarts
-- **Secure Storage**: API keys stored securely in app storage
-- **Dry Run Mode**: Test changes without committing
-- **Skip Tests Option**: Bypass test execution when needed
-- **Snippets Manager**: Save and reuse common task templates
+| Feature | Description |
+|---------|-------------|
+| **AI Code Generation** | Anthropic Claude and OpenAI GPT support |
+| **Custom API Gateways** | Configure custom base URLs for API proxies |
+| **Automatic PRs** | Creates branches, commits, pushes, and opens PRs via GitHub CLI |
+| **Smart Conventions** | Reads repo conventions (husky/commitlint) for proper formatting |
+| **Skills System** | Assign coding guidelines and context per repository |
+| **Predefined Tasks** | Save and reuse common task templates |
+| **Slack Integration** | Notifications + run tasks directly from Slack |
+| **Job Persistence** | SQLite database stores job history across restarts |
+| **Dry Run Mode** | Test changes without committing |
 
 ## Installation
 
@@ -43,26 +51,28 @@ Coda is a native macOS desktop application built with Tauri that acts as your pe
 - macOS 12.0+
 - Node.js 18+
 - Rust (install via [rustup](https://rustup.rs/))
-- GitHub CLI (`brew install gh`) - authenticated with your account
+- GitHub CLI - authenticated with your account
+  ```bash
+  brew install gh
+  gh auth login
+  ```
 
-### Setup
+### Quick Start
 
 ```bash
 # Clone the repository
 git clone https://github.com/your-org/coda.git
 cd coda
 
-# Install frontend dependencies
+# Install dependencies
 npm install
-
-# Install runner dependencies
 cd tools/runner && npm install && cd ../..
 
-# Run in development mode
-npm run tauri dev
-
-# In another terminal, start the runner
+# Start the runner (Terminal 1)
 npm run runner
+
+# Start the app (Terminal 2)
+npm run tauri dev
 ```
 
 ### Build for Production
@@ -71,42 +81,47 @@ npm run runner
 npm run tauri build
 ```
 
-The built application will be in `src-tauri/target/release/bundle/`.
+The built `.app` bundle will be in `src-tauri/target/release/bundle/macos/`.
 
 ## Usage
 
-### Quick Start
+### 1. Configure Settings
 
-1. **Start the Runner**: The background service that executes jobs
-   ```bash
-   npm run runner
-   ```
+1. Go to **Settings** tab
+2. Add your **Anthropic** or **OpenAI** API key
+3. Select preferred AI provider
+4. (Optional) Add Slack webhook for notifications
+5. Click **Sync to Runner**
 
-2. **Launch Coda**: Start the Tauri app
-   ```bash
-   npm run tauri dev
-   ```
+### 2. Add Repositories
 
-3. **Configure Settings**:
-   - Go to the **Settings** tab
-   - Add your Anthropic or OpenAI API key
-   - Select your preferred AI provider
-   - Add GitHub token (optional, for Octokit fallback)
-   - Configure Slack webhook (optional)
-   - Click **Sync to Runner** to apply settings
+In Settings, click on available repos from WebstormProjects to add them, or enter a custom path.
 
-4. **Create a Task**:
-   - Go to the **Tasks** tab
-   - Select a repository from the dropdown
-   - Describe what you want to accomplish
-   - Click **Create Job**
+### 3. Assign Skills (Optional)
 
-5. **Monitor Progress**:
-   - Switch to the **Jobs** tab
-   - Watch as your job progresses through stages:
-     - `queued` → `coding` → `patching` → `testing` → `pr_opened`
-   - Click on a job to see detailed logs
-   - Click **PR** button to open the Pull Request in browser
+Expand a repo in Settings to assign skills (coding guidelines) that will be included in AI prompts.
+
+### 4. Create Tasks
+
+**Option A: Predefined Tasks**
+- Go to **Tasks** tab
+- Create a reusable task with name, repo, and prompt
+- Click **Run** to execute
+
+**Option B: Ad-hoc Prompts**
+- Go to **Prompt** tab
+- Select repo, write your task, click **Create Job**
+
+**Option C: From Slack**
+```
+@Coda prompt "Add input validation to login form" repo:my-app
+```
+
+### 5. Monitor Jobs
+
+- **Jobs** tab shows all jobs with status
+- Click a job to see logs and details
+- Click **PR** button to open the Pull Request
 
 ### Task Examples
 
@@ -118,38 +133,124 @@ Fix the memory leak in the WebSocket connection handler
 Refactor the authentication middleware to use JWT tokens
 
 Add unit tests for the PaymentService class
+
+Update all deprecated API calls to v2
 ```
+
+## Slack Integration
+
+Coda supports two Slack integration modes:
+
+### Webhook (Notifications Only)
+
+Simple one-way notifications when jobs complete or fail.
+
+1. Create a Slack App at https://api.slack.com/apps
+2. Enable **Incoming Webhooks**
+3. Create a webhook for your channel
+4. Add the webhook URL in Coda Settings
+
+### Socket Mode (Bidirectional)
+
+Run tasks and get updates directly from Slack.
+
+#### Setup
+
+1. **Create Slack App** at https://api.slack.com/apps
+   - "Create New App" → "From scratch"
+   - Name: "Coda", select your workspace
+
+2. **Enable Socket Mode**
+   - Sidebar → "Socket Mode" → Toggle ON
+   - Create App-Level Token with `connections:write` scope
+   - Save token (starts with `xapp-`)
+
+3. **Configure Bot Permissions**
+   - "OAuth & Permissions" → Add Bot Token Scopes:
+     - `app_mentions:read`
+     - `chat:write`
+     - `channels:history`
+     - `im:history`
+   - Install app to workspace
+   - Save Bot Token (starts with `xoxb-`)
+
+4. **Enable Events**
+   - "Event Subscriptions" → Toggle ON
+   - Subscribe to: `app_mention`, `message.channels`, `message.im`
+
+5. **Configure Coda**
+   - Add both tokens in Settings
+   - Click "Sync to Runner"
+   - Status should show "connected"
+
+6. **Invite Bot**
+   ```
+   /invite @Coda
+   ```
+
+#### Slack Commands
+
+```
+@Coda help                                    # Show all commands
+@Coda list jobs                               # Recent jobs
+@Coda status job-abc123                       # Job details
+@Coda cancel job-abc123                       # Cancel a job
+@Coda prompt "Add tests" repo:frontend        # Run a prompt
+```
+
+## Skills System
+
+Skills are coding guidelines and context that get injected into AI prompts.
+
+### Built-in Skills
+
+Coda includes 10+ built-in skills:
+- **Languages**: TypeScript, React, Python
+- **Tools**: Docker, Git workflows
+- **Patterns**: Clean Code, SOLID principles
+- **Domains**: REST API design, Testing best practices
+
+### Custom Skills
+
+Create your own skills in the **Skills** tab:
+- Project-specific conventions
+- Domain knowledge
+- Code style preferences
+
+### Assigning Skills
+
+1. Go to **Settings**
+2. Expand a repository
+3. Check skills to apply
+4. Skills are automatically included when creating jobs for that repo
 
 ## Architecture
 
 ```
 coda/
 ├── src/                    # React frontend (Vite + Tailwind)
-│   ├── features/
-│   │   ├── jobs/          # Job list, details, status tracking
-│   │   ├── taskComposer/  # Create new coding tasks
-│   │   ├── settings/      # App configuration
-│   │   └── snippets/      # Reusable task templates
-│   └── App.tsx
+│   └── features/
+│       ├── jobs/           # Job list, details, status
+│       ├── tasks/          # Predefined task templates
+│       ├── taskComposer/   # Ad-hoc prompt creation
+│       ├── skills/         # Skills management
+│       └── settings/       # Configuration
 │
-├── src-tauri/             # Tauri Rust backend
-│   ├── src/
-│   │   ├── lib.rs         # Main entry, plugin registration
-│   │   └── features/
-│   │       ├── jobs/      # Job commands, runner client
-│   │       └── settings/  # Keychain integration
-│   └── tauri.conf.json
+├── src-tauri/              # Tauri Rust backend
+│   └── src/
+│       ├── lib.rs          # Main entry, commands
+│       └── features/       # Rust modules
 │
-└── tools/runner/          # Node.js background service
+└── tools/runner/           # Node.js background service
     └── src/
-        ├── index.ts       # HTTP API server (port 3847)
-        ├── executor.ts    # Job execution pipeline
-        ├── ai-service.ts  # Anthropic/OpenAI integration
-        ├── git-service.ts # Git operations, PR creation
-        ├── patch-service.ts # Apply code changes
-        ├── db-service.ts  # SQLite persistence
-        ├── conventions.ts # Branch/commit formatting
-        └── slack-service.ts # Notifications
+        ├── index.ts        # HTTP API (port 3847)
+        ├── executor.ts     # Job execution pipeline
+        ├── ai-service.ts   # Claude/OpenAI integration
+        ├── git-service.ts  # Git operations, PR creation
+        ├── patch-service.ts# Apply code changes
+        ├── db-service.ts   # SQLite persistence
+        ├── slack-service.ts# Webhook notifications
+        └── slack-bot.ts    # Socket Mode commands
 ```
 
 ### Data Flow
@@ -164,41 +265,43 @@ coda/
                     ▼                ▼                ▼
               ┌──────────┐    ┌──────────┐    ┌──────────┐
               │ AI APIs  │    │  GitHub  │    │  Slack   │
-              │(Claude/  │    │  (gh CLI)│    │ Webhook  │
-              │ OpenAI)  │    └──────────┘    └──────────┘
-              └──────────┘
+              │(Claude/  │    │  (gh CLI)│    │(Webhook/ │
+              │ OpenAI)  │    └──────────┘    │ Socket)  │
+              └──────────┘                    └──────────┘
 ```
 
-### Job Execution Pipeline
+### Job Pipeline
 
 ```
-1. Create Job     → Store in SQLite, status: "queued"
-2. Coding Phase   → Send task to AI, receive patches
-3. Patching Phase → Apply file changes to repo
-4. Testing Phase  → Run test commands (if enabled)
-5. PR Creation    → Create branch, commit, push, open PR
-6. Notification   → Send Slack message (if configured)
+1. Create    → Store in SQLite (queued)
+2. Coding    → Send to AI, receive patches
+3. Patching  → Apply file changes
+4. Testing   → Run test commands (optional)
+5. PR        → Branch, commit, push, open PR
+6. Notify    → Slack message
 ```
 
 ## Configuration
 
-### Settings
+### Settings Reference
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `preferredProvider` | AI provider to use | `anthropic` |
+| `preferredProvider` | AI provider | `anthropic` |
 | `anthropicApiKey` | Anthropic API key | - |
-| `anthropicBaseUrl` | Custom Anthropic API URL | `https://api.anthropic.com` |
+| `anthropicBaseUrl` | Custom API URL | `https://api.anthropic.com` |
 | `openaiApiKey` | OpenAI API key | - |
-| `openaiBaseUrl` | Custom OpenAI API URL | `https://api.openai.com/v1` |
-| `githubToken` | GitHub PAT (fallback for gh CLI) | - |
-| `slackWebhookUrl` | Slack incoming webhook | - |
-| `maxChangedFiles` | Max files AI can modify | `10` |
+| `openaiBaseUrl` | Custom API URL | `https://api.openai.com/v1` |
+| `githubToken` | GitHub PAT (fallback) | - |
+| `slackWebhookUrl` | Webhook URL | - |
+| `slackAppToken` | Socket Mode app token | - |
+| `slackBotToken` | Socket Mode bot token | - |
+| `maxChangedFiles` | Max files per job | `10` |
 | `maxDiffSize` | Max diff lines | `5000` |
-| `autoRetry` | Retry failed jobs once | `false` |
-| `skipTestsByDefault` | Skip tests by default | `false` |
+| `autoRetry` | Retry failed jobs | `true` |
+| `skipTestsByDefault` | Skip tests | `true` |
 
-### Repository Conventions
+### Conventions
 
 The runner reads conventions from `tools/runner/repo-conventions.json`:
 
@@ -213,116 +316,100 @@ The runner reads conventions from `tools/runner/repo-conventions.json`:
     "types": ["feat", "fix", "docs", "style", "refactor", "test", "chore"],
     "format": "{type}(agent): {description}",
     "maxLength": 72
-  },
-  "pr": {
-    "titleFormat": "{type}: {description}",
-    "bodyTemplate": "## Summary\n\n{explanation}\n\n## Changes\n\n{files}"
   }
 }
 ```
 
-These conventions are based on common setups using husky + commitlint.
+### Data Storage
+
+| Data | Location |
+|------|----------|
+| Jobs database | `~/.mac-agent/jobs.db` |
+| App settings | Browser localStorage |
+| API keys | Browser localStorage |
 
 ## API Reference
 
-### Runner HTTP API
+### Runner Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/health` | GET | Health check |
+| `/health` | GET | Health check + Slack status |
+| `/repos` | GET | List git repositories |
 | `/jobs` | GET | List all jobs |
-| `/jobs` | POST | Create new job |
+| `/jobs` | POST | Create job |
 | `/jobs/:id` | GET | Get job details |
 | `/jobs/:id/retry` | POST | Retry failed job |
 | `/jobs/:id/cancel` | POST | Cancel running job |
-| `/repos` | GET | List available git repos |
-| `/settings` | GET | Get current settings (masked) |
+| `/settings` | GET | Get settings (masked) |
 | `/settings` | POST | Update settings |
 
-### Create Job Request
+### Create Job
 
-```json
-{
-  "task": "Add input validation to login form",
-  "repo": "/Users/you/projects/my-app",
-  "dryRun": false,
-  "skipTests": false
-}
+```bash
+curl -X POST http://localhost:3847/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Add input validation",
+    "repo": "/path/to/repo",
+    "skipTests": true,
+    "skills": [{"name": "TypeScript", "content": "..."}]
+  }'
 ```
-
-### Job States
-
-```
-queued → coding → patching → testing → pr_opened
-           ↓         ↓          ↓
-        failed    failed     failed
-```
-
-## Data Storage
-
-| Data | Location | Format |
-|------|----------|--------|
-| Jobs | `~/.mac-agent/jobs.db` | SQLite |
-| Settings | App localStorage | JSON |
-| API Keys | App localStorage | JSON |
 
 ## Troubleshooting
 
-### Port already in use
+### Runner not connecting
 
 ```bash
-# Kill processes on default ports
-lsof -ti:1420 | xargs kill -9  # Vite dev server
-lsof -ti:3847 | xargs kill -9  # Runner
+# Check if runner is running
+curl http://localhost:3847/health
+
+# Kill existing processes
+lsof -ti:3847 | xargs kill -9
+
+# Restart runner
+npm run runner
 ```
 
-### GitHub CLI not authenticated
+### GitHub CLI issues
 
 ```bash
+# Verify authentication
+gh auth status
+
+# Re-authenticate
 gh auth login
-gh auth status  # Verify authentication
-```
 
-### PR creation fails for organization repos
-
-Ensure your GitHub CLI has access to the organization:
-```bash
+# For org repos, add org scope
 gh auth refresh -s repo,read:org
 ```
 
-### Runner not connecting
+### Slack bot not responding
 
-1. Ensure runner is started: `npm run runner`
-2. Check runner logs in terminal
-3. Verify port 3847 is not blocked
-4. Click "Sync to Runner" in Settings
+1. Verify tokens are correct (xapp-... and xoxb-...)
+2. Check runner logs for connection status
+3. Ensure bot is invited to channel: `/invite @Coda`
+4. Check Event Subscriptions are enabled in Slack App
 
-### AI API errors
+### AI errors
 
-1. Verify API key is correct
-2. Check base URL if using a gateway
-3. Ensure you have API credits/quota
+1. Verify API key is valid
+2. Check if using custom base URL correctly
+3. Ensure you have API credits
 4. Check runner logs for detailed error
 
 ## Development
 
-### Project Scripts
+### Scripts
 
 ```bash
-# Start Tauri development
-npm run tauri dev
-
-# Start runner in watch mode
-npm run runner
-
-# Build runner
-npm run runner:build
-
-# Build production app
-npm run tauri build
-
-# Frontend only (no Tauri)
-npm run dev
+npm run dev          # Frontend only (Vite)
+npm run tauri dev    # Full Tauri app
+npm run runner       # Start runner (watch mode)
+npm run runner:build # Build runner
+npm run build        # Build frontend
+npm run tauri build  # Build production app
 ```
 
 ### Tech Stack
@@ -331,32 +418,26 @@ npm run dev
 |-----------|------------|
 | Frontend | React 18, Vite, Tailwind CSS, Zustand, TanStack Query |
 | Desktop | Tauri 2.x (Rust) |
-| Runner | Node.js, Express, TypeScript |
+| Runner | Node.js 18+, Express, TypeScript |
 | Database | SQLite (better-sqlite3) |
 | AI | Anthropic SDK, OpenAI SDK |
-| Git | simple-git, GitHub CLI (gh) |
-
-### Adding a New Feature
-
-1. Frontend: Add to `src/features/`
-2. Runner: Add service in `tools/runner/src/`
-3. Tauri commands: Add in `src-tauri/src/features/`
+| Git | simple-git, GitHub CLI |
+| Slack | @slack/bolt (Socket Mode) |
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for planned features and improvements.
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
+See [ROADMAP.md](ROADMAP.md) for planned features.
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+## License
+
+MIT License - see [LICENSE](LICENSE)
 
 ---
 
 <p align="center">
-  Made with Tauri + React + Node.js
+  Built with Tauri + React + Node.js
 </p>

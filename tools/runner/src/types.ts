@@ -12,6 +12,7 @@ export interface Job {
   dryRun: boolean
   skipTests: boolean
   retryCount: number
+  skills?: SkillContext[]  // Skills to apply
 }
 
 export type JobStatus =
@@ -23,11 +24,17 @@ export type JobStatus =
   | 'failed'
   | 'cancelled'
 
+export interface SkillContext {
+  name: string
+  content: string
+}
+
 export interface CreateJobRequest {
   task: string
   repo: string
   dryRun?: boolean
   skipTests?: boolean
+  skills?: SkillContext[]
 }
 
 export interface Settings {
@@ -38,6 +45,8 @@ export interface Settings {
   preferredProvider?: 'openai' | 'anthropic'
   githubToken?: string
   slackWebhookUrl?: string
+  slackAppToken?: string    // xapp-... for Socket Mode
+  slackBotToken?: string    // xoxb-... for Socket Mode
   maxChangedFiles: number
   maxDiffSize: number
   autoRetry: boolean

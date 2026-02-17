@@ -1,10 +1,10 @@
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
-import { AIResponse } from './types.js'
+import { AIResponse, SkillContext } from './types.js'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 
-const SYSTEM_PROMPT = `You are an expert software engineer. You will receive a task description and information about a codebase.
+const BASE_SYSTEM_PROMPT = `You are an expert software engineer. You will receive a task description and information about a codebase.
 Your job is to generate code patches to complete the task.
 
 IMPORTANT: Respond ONLY with valid JSON in this exact format:
@@ -27,6 +27,26 @@ Rules:
 - Follow existing code style and patterns
 - Add appropriate error handling
 - Include test commands if applicable`
+
+function buildSystemPrompt(skills?: SkillContext[]): string {
+  if (!skills || skills.length === 0) {
+    return BASE_SYSTEM_PROMPT
+  }
+
+  const skillsSection = skills
+    .map(skill => `## ${skill.name}\n${skill.content}`)
+    .join('\n\n')
+
+  return `${BASE_SYSTEM_PROMPT}
+
+---
+
+# Applied Skills
+
+The following skills and guidelines must be followed:
+
+${skillsSection}`
+}
 
 export class AIService {
   private openai: OpenAI | null = null
@@ -57,7 +77,8 @@ export class AIService {
   async generateCode(
     task: string,
     repoPath: string,
-    provider: 'openai' | 'anthropic' = 'anthropic'
+    provider: 'openai' | 'anthropic' = 'anthropic',
+    skills?: SkillContext[]
   ): Promise<AIResponse> {
     // Gather context from the repo
     const context = await this.gatherRepoContext(repoPath)
@@ -70,28 +91,30 @@ ${context}
 
 Generate the necessary code patches to complete this task.`
 
+    const systemPrompt = buildSystemPrompt(skills)
+
     if (provider === 'anthropic' && this.anthropic) {
-      return this.generateWithAnthropic(userPrompt)
+      return this.generateWithAnthropic(userPrompt, systemPrompt)
     } else if (provider === 'openai' && this.openai) {
-      return this.generateWithOpenAI(userPrompt)
+      return this.generateWithOpenAI(userPrompt, systemPrompt)
     } else {
       // Try anthropic first, then openai
       if (this.anthropic) {
-        return this.generateWithAnthropic(userPrompt)
+        return this.generateWithAnthropic(userPrompt, systemPrompt)
       } else if (this.openai) {
-        return this.generateWithOpenAI(userPrompt)
+        return this.generateWithOpenAI(userPrompt, systemPrompt)
       }
       throw new Error('No AI provider configured')
     }
   }
 
-  private async generateWithAnthropic(userPrompt: string): Promise<AIResponse> {
+  private async generateWithAnthropic(userPrompt: string, systemPrompt: string): Promise<AIResponse> {
     if (!this.anthropic) throw new Error('Anthropic not configured')
 
     const response = await this.anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8000,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     })
 
@@ -103,13 +126,13 @@ Generate the necessary code patches to complete this task.`
     return this.parseAIResponse(content.text)
   }
 
-  private async generateWithOpenAI(userPrompt: string): Promise<AIResponse> {
+  private async generateWithOpenAI(userPrompt: string, systemPrompt: string): Promise<AIResponse> {
     if (!this.openai) throw new Error('OpenAI not configured')
 
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
       max_tokens: 8000,

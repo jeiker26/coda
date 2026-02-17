@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSettingsStore } from '@features/settings'
+import { useSkillsStore } from '@features/skills/model/skills.store'
 import { runnerApi } from '@features/jobs/api/jobs.api'
 import { CreateJobRequest } from '@features/jobs'
 
@@ -12,6 +13,7 @@ export function TaskComposer() {
   const [mode, setMode] = useState<Mode>('run')
   const [skipTests, setSkipTests] = useState(true)
   const { repos, skipTestsByDefault } = useSettingsStore()
+  const { getSkillsForRepo } = useSkillsStore()
   const queryClient = useQueryClient()
 
   // Initialize skipTests from settings default
@@ -30,11 +32,19 @@ export function TaskComposer() {
   const handleSubmit = () => {
     if (!task.trim() || !selectedRepo) return
     
+    // Get skills assigned to the selected repo
+    const repoSkills = getSkillsForRepo(selectedRepo)
+    const skillsPayload = repoSkills.map(skill => ({
+      name: skill.name,
+      content: skill.content,
+    }))
+
     createJobMutation.mutate({
       task: task.trim(),
       repo: selectedRepo,
       dryRun: mode === 'draft',
       skipTests,
+      skills: skillsPayload,
     })
   }
 

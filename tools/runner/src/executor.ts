@@ -1,4 +1,4 @@
-import { Job, Settings } from './types.js'
+import { Job, Settings, CodePatch } from './types.js'
 import { jobStore } from './store.js'
 import { AIService } from './ai-service.js'
 import { GitService } from './git-service.js'
@@ -92,9 +92,12 @@ export async function executeJob(jobId: string): Promise<void> {
     jobStore.addLog(jobId, 'Starting code generation...')
     await slackService.sendJobUpdate(job.task, job.repo, 'coding')
 
-    // Generate code with AI
-    const aiResponse = await aiService.generateCode(job.task, job.repo, settings.preferredProvider)
+    // Generate code with AI (pass skills for context)
+    const aiResponse = await aiService.generateCode(job.task, job.repo, settings.preferredProvider, job.skills)
     jobStore.addLog(jobId, `AI generated ${aiResponse.patches.length} patches`)
+    if (job.skills && job.skills.length > 0) {
+      jobStore.addLog(jobId, `Applied ${job.skills.length} skills: ${job.skills.map(s => s.name).join(', ')}`)
+    }
     jobStore.addLog(jobId, `Explanation: ${aiResponse.explanation}`)
 
     // Validate patches

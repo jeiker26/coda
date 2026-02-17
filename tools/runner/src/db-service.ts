@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { join } from 'path'
 import { homedir } from 'os'
 import { mkdirSync, existsSync } from 'fs'
-import { Job, JobStatus } from './types.js'
+import { Job, JobStatus, SkillContext } from './types.js'
 
 // Store database in user's app data directory
 const APP_DATA_DIR = join(homedir(), '.mac-agent')
@@ -33,7 +33,8 @@ db.exec(`
     updated_at TEXT NOT NULL,
     dry_run INTEGER NOT NULL DEFAULT 0,
     skip_tests INTEGER NOT NULL DEFAULT 0,
-    retry_count INTEGER NOT NULL DEFAULT 0
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    skills TEXT DEFAULT '[]'
   );
 
   CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
@@ -41,10 +42,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at DESC);
 `)
 
+// Migration: Add skills column if it doesn't exist (for existing databases)
+try {
+  db.exec(`ALTER TABLE jobs ADD COLUMN skills TEXT DEFAULT '[]'`)
+  console.log('[DB] Added skills column to jobs table')
+} catch (e: any) {
+  // Column already exists, ignore error
+  if (!e.message.includes('duplicate column')) {
+    console.error('[DB] Migration error:', e.message)
+  }
+}
+
 // Prepared statements for better performance
 const insertJob = db.prepare(`
-  INSERT INTO jobs (id, task, repo, branch, status, logs, created_at, updated_at, dry_run, skip_tests, retry_count)
-  VALUES (@id, @task, @repo, @branch, @status, @logs, @createdAt, @updatedAt, @dryRun, @skipTests, @retryCount)
+  INSERT INTO jobs (id, task, repo, branch, status, logs, created_at, updated_at, dry_run, skip_tests, retry_count, skills)
+  VALUES (@id, @task, @repo, @branch, @status, @logs, @createdAt, @updatedAt, @dryRun, @skipTests, @retryCount, @skills)
 `)
 
 const selectJob = db.prepare(`SELECT * FROM jobs WHERE id = ?`)
@@ -69,7 +81,8 @@ const updateJobStmt = db.prepare(`
     logs = @logs,
     updated_at = @updatedAt,
     branch = @branch,
-    retry_count = @retryCount
+    retry_count = @retryCount,
+    skills = @skills
   WHERE id = @id
 `)
 
@@ -91,6 +104,7 @@ function rowToJob(row: any): Job {
     dryRun: Boolean(row.dry_run),
     skipTests: Boolean(row.skip_tests),
     retryCount: row.retry_count,
+    skills: JSON.parse(row.skills || '[]') as SkillContext[],
   }
 }
 
@@ -110,6 +124,7 @@ function jobToParams(job: Job): any {
     dryRun: job.dryRun ? 1 : 0,
     skipTests: job.skipTests ? 1 : 0,
     retryCount: job.retryCount,
+    skills: JSON.stringify(job.skills || []),
   }
 }
 

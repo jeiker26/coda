@@ -5,7 +5,7 @@ import { Settings, RepoConfig, defaultSettings } from './settings.types'
 const RUNNER_URL = 'http://localhost:3847'
 
 interface SettingsState extends Settings {
-  setApiKey: (key: 'openaiApiKey' | 'anthropicApiKey' | 'githubToken' | 'slackWebhookUrl', value: string) => void
+  setApiKey: (key: 'openaiApiKey' | 'anthropicApiKey' | 'githubToken' | 'slackWebhookUrl' | 'slackAppToken' | 'slackBotToken', value: string) => void
   setOpenaiBaseUrl: (url: string) => void
   setAnthropicBaseUrl: (url: string) => void
   setPreferredProvider: (provider: 'openai' | 'anthropic') => void
@@ -88,6 +88,8 @@ export const useSettingsStore = create<SettingsState>()(
               preferredProvider: state.preferredProvider,
               githubToken: state.githubToken,
               slackWebhookUrl: state.slackWebhookUrl,
+              slackAppToken: state.slackAppToken,
+              slackBotToken: state.slackBotToken,
               maxChangedFiles: state.maxChangedFiles,
               maxDiffSize: state.maxDiffSize,
               autoRetry: state.autoRetry,

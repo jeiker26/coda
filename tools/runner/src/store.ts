@@ -1,4 +1,4 @@
-import { Job, JobStatus } from './types.js'
+import { Job, JobStatus, SkillContext, CreateJobRequest } from './types.js'
 import { v4 as uuid } from 'uuid'
 import { dbService } from './db-service.js'
 
@@ -25,7 +25,32 @@ function generateBranchSlug(task: string): string {
 }
 
 class JobStore {
-  create(task: string, repo: string, dryRun: boolean = false, skipTests: boolean = false): Job {
+  // Overload: accept object or individual params
+  create(request: CreateJobRequest): Job
+  create(task: string, repo: string, dryRun?: boolean, skipTests?: boolean, skills?: SkillContext[]): Job
+  create(
+    taskOrRequest: string | CreateJobRequest,
+    repo?: string,
+    dryRun: boolean = false,
+    skipTests: boolean = false,
+    skills?: SkillContext[]
+  ): Job {
+    // Handle object form
+    if (typeof taskOrRequest === 'object') {
+      const req = taskOrRequest
+      return this.createJob(req.task, req.repo, req.dryRun ?? false, req.skipTests ?? false, req.skills)
+    }
+    // Handle individual params form
+    return this.createJob(taskOrRequest, repo!, dryRun, skipTests, skills)
+  }
+
+  private createJob(
+    task: string,
+    repo: string,
+    dryRun: boolean,
+    skipTests: boolean,
+    skills?: SkillContext[]
+  ): Job {
     const now = new Date().toISOString()
     const job: Job = {
       id: uuid(),
@@ -39,6 +64,7 @@ class JobStore {
       dryRun,
       skipTests,
       retryCount: 0,
+      skills,
     }
     return dbService.create(job)
   }

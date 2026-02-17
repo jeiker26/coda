@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { TaskComposer } from '@features/taskComposer'
 import { JobsList } from '@features/jobs'
-import { SnippetsList } from '@features/snippets'
+import { TasksList } from '@features/tasks'
+import { SkillsList } from '@features/skills'
 import { Settings } from '@features/settings'
 
-type Tab = 'tasks' | 'jobs' | 'snippets' | 'settings'
+type Tab = 'tasks' | 'prompt' | 'jobs' | 'skills' | 'settings'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('tasks')
@@ -18,7 +19,7 @@ function App() {
           <h1 className="text-lg font-semibold">Coda</h1>
         </div>
         <nav className="flex gap-1">
-          {(['tasks', 'jobs', 'snippets', 'settings'] as Tab[]).map((tab) => (
+          {(['tasks', 'prompt', 'jobs', 'skills', 'settings'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -36,9 +37,10 @@ function App() {
 
       {/* Content */}
       <main className="p-4">
-        {activeTab === 'tasks' && <TaskComposer />}
+        {activeTab === 'tasks' && <TasksList />}
+        {activeTab === 'prompt' && <TaskComposer />}
         {activeTab === 'jobs' && <JobsList />}
-        {activeTab === 'snippets' && <SnippetsList />}
+        {activeTab === 'skills' && <SkillsList />}
         {activeTab === 'settings' && <Settings />}
       </main>
     </div>

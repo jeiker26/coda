@@ -18,12 +18,14 @@
     "@tauri-apps/plugin-shell": "^2.3.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "uuid": "^13.0.0",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.33",
